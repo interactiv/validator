@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"reflect"
+	"regexp"
 )
 
 // Constraint represents a constraint that can be validated
@@ -192,6 +194,137 @@ func (c *isType) Validate(value interface{}) error {
 	return nil
 }
 
+// Email returns an email constraint
+func Email() Constraint {
+	c := new(email)
+	return c
+}
+
+type email struct {
+}
+
+// Validate returns an error if the constraint is violated
+func (c email) Validate(value interface{}) error {
+	var ok bool
+	var val string
+	if val, ok = value.(string); ok != true {
+		return errors.New(CannotValidateNonStringMessage)
+	}
+	if !EmailRegexp.MatchString(val) {
+		return errors.New(EmailMessage)
+	}
+	return nil
+}
+
+// Length returns an length constraint
+func Length(min int, max int) Constraint {
+	c := &length{min, max}
+	return c
+}
+
+type length struct {
+	min int
+	max int
+}
+
+// Validate returns an error if the constraint is violated
+func (c length) Validate(value interface{}) error {
+	var ok bool
+	var val string
+	if val, ok = value.(string); ok != true {
+		return errors.New(CannotValidateNonStringMessage)
+	}
+	if c.min == c.max {
+		if c.min != len(val) {
+			return fmt.Errorf(ExactLengthMessage, c.min)
+		}
+	} else {
+		if !(c.min <= len(val)) {
+			return fmt.Errorf(MinMessage, c.min)
+		}
+		if !(len(val) <= c.max) {
+			return fmt.Errorf(MaxMessage, c.max)
+		}
+	}
+	return nil
+}
+
+// URL returns an url constraint
+func URL() *URLConstraint {
+	c := new(URLConstraint)
+	c.protocols = []string{}
+	return c
+}
+
+// URLConstraint represents an url constraint
+type URLConstraint struct {
+	protocols []string
+}
+
+// Protocols return the protocols supported by the constraint
+func (c URLConstraint) Protocols() []string {
+	return c.protocols
+}
+
+// SetProtocols sets the protocols supported by the constraint
+func (c *URLConstraint) SetProtocols(protocols []string) *URLConstraint {
+	c.protocols = protocols
+	return c
+}
+
+// Validate returns an error if the constraint is violated
+func (c URLConstraint) Validate(value interface{}) error {
+	var ok bool
+	var val string
+	if val, ok = value.(string); ok != true {
+		return errors.New(CannotValidateNonStringMessage)
+	}
+	if parsedURL, err := url.Parse(val); err != nil {
+		return errors.New(URLMessage)
+	} else if c.protocols != nil && len(c.protocols) > 0 {
+		for _, protocol := range c.protocols {
+			if parsedURL.Scheme == protocol {
+				return nil
+			}
+			return errors.New(URLMessage)
+		}
+	}
+	return nil
+}
+
+func Regexp(pattern *regexp.Regexp) *RegexpConstraint {
+	return &RegexpConstraint{pattern, true}
+}
+
+type RegexpConstraint struct {
+	pattern *regexp.Regexp
+	match   bool
+}
+
+func (c RegexpConstraint) Match() bool {
+	return c.match
+}
+
+func (c *RegexpConstraint) SetMatch(match bool) *RegexpConstraint {
+	c.match = match
+	return c
+}
+
+func (c *RegexpConstraint) Validate(value interface{}) error {
+	var ok bool
+	var val string
+	if val, ok = value.(string); ok != true {
+		return errors.New(CannotValidateNonStringMessage)
+	}
+	if c.match && !c.pattern.MatchString(val) {
+		return errors.New(RegexpMatchMessage)
+	}
+	if !c.match && c.pattern.MatchString(val) {
+		return errors.New(RegexpMatchMessage)
+	}
+	return nil
+}
+
 // validation error messages
 const (
 	NotBlankMessage                = "This value should not be blank"
@@ -202,4 +335,15 @@ const (
 	TrueMessage                    = "This value should be true"
 	FalseMessage                   = "This value should be false"
 	TypeMessage                    = "This value should be of type %s"
+	EmailMessage                   = " This value is not a valid email address"
+	MinMessage                     = "This value is too short. It should have %d characters or more."
+	MaxMessage                     = "This value is too long. It should have %d characters or less"
+	ExactLengthMessage             = "This value should have exactly %d characters"
+	URLMessage                     = "This value is not a valid URL."
+	RegexpMatchMessage             = "This value is not valid"
+)
+
+var (
+	// EmailRegexp represents an email pattern
+	EmailRegexp = regexp.MustCompile(".+\\@.+\\..+")
 )

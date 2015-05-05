@@ -5,6 +5,7 @@ package constraint_test
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/interactiv/expect"
@@ -36,4 +37,16 @@ var fixtures = []list{
 	list{constraint.Type(reflect.TypeOf(Example{})), Example{}, true},
 	list{constraint.Type(reflect.TypeOf(5)), 10, true},
 	list{constraint.Type(reflect.TypeOf("example")), 10, false},
+	list{constraint.Email(), "johndoe@example.com", true},
+	list{constraint.Email(), "johndoe@example", false},
+	list{constraint.Length(5, 10), "example", true},
+	list{constraint.Length(7, 7), "example", true},
+	list{constraint.Length(7, 7), "examples", false},
+	list{constraint.Length(4, 6), "example", false},
+	list{constraint.URL().SetProtocols([]string{"https"}), "https://example.com", true},
+	list{constraint.URL().SetProtocols([]string{"https"}), "http://example.com", false},
+	list{constraint.URL().SetProtocols([]string{"http"}), "example.com", false},
+	list{constraint.Regexp(regexp.MustCompile("[a-z A-Z]+\\s[a-z A-Z]+")), "John Doe", true},
+	list{constraint.Regexp(regexp.MustCompile("[a-z A-Z]+\\s[a-z A-Z]+")).SetMatch(false), "John Doe", false},
+	list{constraint.Regexp(regexp.MustCompile("[a-z A-Z]+\\s[a-z A-Z]+")), "Jane", false},
 }
