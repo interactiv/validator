@@ -17,12 +17,12 @@ func New() *Validator {
 	return &Validator{}
 }
 
-func (v *Validator) Validate(loader ValidatorMetadataLoader) (errors []string) {
+func (v *Validator) Validate(loader ValidatorMetadataLoader) (errors []error) {
 	metadata := &Metadata{constraints: []constraint.Constraint{}}
 	loader.LoadValidatorMetadata(metadata)
 	for _, Constraint := range metadata.constraints {
-		if !Constraint.Validate(loader) {
-			errors = append(errors, Constraint.Message())
+		if err := Constraint.Validate(loader); err != nil {
+			errors = append(errors, err)
 		}
 	}
 	return errors
