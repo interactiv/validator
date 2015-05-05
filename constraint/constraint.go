@@ -310,6 +310,7 @@ func (c *RegexpConstraint) SetMatch(match bool) *RegexpConstraint {
 	return c
 }
 
+// Validate returns an error if the constraint is violated
 func (c *RegexpConstraint) Validate(value interface{}) error {
 	var ok bool
 	var val string
@@ -323,6 +324,159 @@ func (c *RegexpConstraint) Validate(value interface{}) error {
 		return errors.New(RegexpMatchMessage)
 	}
 	return nil
+}
+
+func Range(min, max float64) Constraint {
+	return &rangeConstraint{min, max}
+}
+
+type rangeConstraint struct {
+	min float64
+	max float64
+}
+
+// Validate returns an error if the constraint is violated
+func (rc *rangeConstraint) Validate(value interface{}) error {
+	valFloat64, err := ToFloat64(value)
+	if err != nil {
+		return errors.New(ErrorNotNumberMessage)
+	}
+
+	if !(rc.min <= valFloat64) {
+		return fmt.Errorf(RangeMinMessage, fmt.Sprint(rc.min))
+	}
+	if !(valFloat64 <= rc.max) {
+		return fmt.Errorf(RangeMaxMessage, fmt.Sprint(rc.max))
+
+	}
+	return nil
+}
+
+func EqualTo(val interface{}) Constraint {
+	return &equalTo{val}
+}
+
+type equalTo struct {
+	value interface{}
+}
+
+// Validate returns an error if the constraint is violated
+func (c *equalTo) Validate(value interface{}) error {
+	if c.value != value {
+		return fmt.Errorf(EqualToMessage, c.value)
+	}
+	return nil
+}
+
+func NotEqualTo(val interface{}) Constraint {
+	return &notEqualTo{val}
+}
+
+type notEqualTo struct {
+	value interface{}
+}
+
+// Validate returns an error if the constraint is violated
+func (c *notEqualTo) Validate(value interface{}) error {
+	if c.value == value {
+		return fmt.Errorf(NotEqualToMessage, c.value)
+	}
+	return nil
+}
+
+func LessThan(value float64) Constraint {
+	return &lessThan{value}
+}
+
+type lessThan struct {
+	value float64
+}
+
+// Validate returns an error if the constraint is violated
+func (c lessThan) Validate(value interface{}) error {
+	if val, err := ToFloat64(value); err != nil {
+		errors.New(ErrorNotNumberMessage)
+	} else if val >= c.value {
+		return fmt.Errorf(LessThanMessage, c.value)
+	}
+	return nil
+}
+
+func LessThanOrEqual(value float64) Constraint {
+	return &lessThanOrEqual{value}
+}
+
+type lessThanOrEqual struct {
+	value float64
+}
+
+// Validate returns an error if the constraint is violated
+func (c *lessThanOrEqual) Validate(value interface{}) error {
+	if val, err := ToFloat64(value); err != nil {
+		errors.New(ErrorNotNumberMessage)
+	} else if val > c.value {
+		return fmt.Errorf(LessThanOrEqualMessage, c.value)
+	}
+	return nil
+}
+
+func GreaterThan(value float64) Constraint {
+	return &greaterThan{value}
+}
+
+type greaterThan struct {
+	value float64
+}
+
+// Validate returns an error if the constraint is violated
+func (c *greaterThan) Validate(value interface{}) error {
+	if val, err := ToFloat64(value); err != nil {
+		errors.New(ErrorNotNumberMessage)
+	} else if val <= c.value {
+		return fmt.Errorf(GreaterThanMessage, c.value)
+	}
+	return nil
+}
+
+func GreaterThanOrEqual(value float64) Constraint {
+	return &greaterThanOrEqual{value}
+}
+
+type greaterThanOrEqual struct {
+	value float64
+}
+
+// Validate returns an error if the constraint is violated
+func (c *greaterThanOrEqual) Validate(value interface{}) error {
+	if val, err := ToFloat64(value); err != nil {
+		errors.New(ErrorNotNumberMessage)
+	} else if val < c.value {
+		return fmt.Errorf(GreaterThanOrEqualMessage, c.value)
+	}
+	return nil
+}
+
+/***********/
+/* HELPERS */
+/***********/
+
+func ToFloat64(value interface{}) (float64, error) {
+	switch v := value.(type) {
+	case int:
+		return float64(v), nil
+	case int8:
+		return float64(v), nil
+	case int32:
+		return float64(v), nil
+	case int64:
+		return float64(v), nil
+	case float32:
+		return float64(v), nil
+	case float64:
+		return v, nil
+	default:
+		return 0, fmt.Errorf("Cant convert %v to float64")
+	}
 }
 
 // validation error messages
@@ -341,6 +495,15 @@ const (
 	ExactLengthMessage             = "This value should have exactly %d characters"
 	URLMessage                     = "This value is not a valid URL."
 	RegexpMatchMessage             = "This value is not valid"
+	RangeMinMessage                = "This value should be %s or more"
+	RangeMaxMessage                = "This value should be %s or less"
+	ErrorNotNumberMessage          = "This value should be a valid number"
+	EqualToMessage                 = "This value should be equal to %v"
+	NotEqualToMessage              = "This value should not be equal to %v"
+	LessThanMessage                = "This value should be less than %d"
+	LessThanOrEqualMessage         = "This value should be less than or equal to %d"
+	GreaterThanMessage             = "This value should be greater than %d"
+	GreaterThanOrEqualMessage      = "This value should be greater than or equal to %d"
 )
 
 var (
