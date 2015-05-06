@@ -438,21 +438,54 @@ func (c *greaterThan) Validate(value interface{}) error {
 	return nil
 }
 
+// GreaterThanOrEqual returns a great than equal constraint
 func GreaterThanOrEqual(value float64) Constraint {
-	return &greaterThanOrEqual{value}
+	return &greaterThanOrEqual{value, GreaterThanOrEqualMessage}
 }
 
 type greaterThanOrEqual struct {
-	value float64
+	value   float64
+	message string
+}
+
+// Message returns the error message
+func (c greaterThanOrEqual) Message() string {
+	return c.message
+}
+
+// Message sets the error message
+func (c *greaterThanOrEqual) SetMessage(message string) *greaterThanOrEqual {
+	c.message = message
+	return c
 }
 
 // Validate returns an error if the constraint is violated
-func (c *greaterThanOrEqual) Validate(value interface{}) error {
+func (c greaterThanOrEqual) Validate(value interface{}) error {
 	if val, err := ToFloat64(value); err != nil {
 		errors.New(ErrorNotNumberMessage)
 	} else if val < c.value {
-		return fmt.Errorf(GreaterThanOrEqualMessage, c.value)
+		return fmt.Errorf(c.message, c.value)
 	}
+	return nil
+}
+
+func Choice(choices []interface{}) *choice {
+	return &choice{choices: choices}
+}
+
+type choice struct {
+	choices         []interface{}
+	multiple        bool
+	min             int
+	max             int
+	message         string
+	multipleMessage string
+	minMessage      string
+	maxMessage      string
+	strict          bool
+}
+
+func (c choice) Validate(value interface{}) error {
 	return nil
 }
 
