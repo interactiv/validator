@@ -485,6 +485,105 @@ type choice struct {
 	strict          bool
 }
 
+// GetChoices returns a []interface{}
+func (choice choice) GetChoices() []interface{} {
+	return choice.choices
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetChoices(choices []interface{}) *choice {
+	choice.choices = choices
+	return choice
+}
+
+// GetMultiple returns a bool
+func (choice choice) GetMultiple() bool {
+	return choice.multiple
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetMultiple(multiple bool) *choice {
+	choice.multiple = multiple
+	return choice
+}
+
+// GetMin returns a int
+func (choice choice) GetMin() int {
+	return choice.min
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetMin(min int) *choice {
+	choice.min = min
+	return choice
+}
+
+// GetMax returns a int
+func (choice choice) GetMax() int {
+	return choice.max
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetMax(max int) *choice {
+	choice.max = max
+	return choice
+}
+
+// GetMessage returns a string
+func (choice choice) GetMessage() string {
+	return choice.message
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetMessage(message string) *choice {
+	choice.message = message
+	return choice
+}
+
+// GetMultipleMessage returns a string
+func (choice choice) GetMultipleMessage() string {
+	return choice.multipleMessage
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetMultipleMessage(multipleMessage string) *choice {
+	choice.multipleMessage = multipleMessage
+	return choice
+}
+
+// GetMinMessage returns a string
+func (choice choice) GetMinMessage() string {
+	return choice.minMessage
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetMinMessage(minMessage string) *choice {
+	choice.minMessage = minMessage
+	return choice
+}
+
+// GetMaxMessage returns a string
+func (choice choice) GetMaxMessage() string {
+	return choice.maxMessage
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetMaxMessage(maxMessage string) *choice {
+	choice.maxMessage = maxMessage
+	return choice
+}
+
+// GetStrict returns a bool
+func (choice choice) GetStrict() bool {
+	return choice.strict
+}
+
+// Setchoice sets *choice.choice and returns *choice
+func (choice *choice) SetStrict(strict bool) *choice {
+	choice.strict = strict
+	return choice
+}
+
 func (c choice) Validate(value interface{}) error {
 	return nil
 }
