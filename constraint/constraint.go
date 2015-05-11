@@ -584,8 +584,20 @@ func (choice *choice) SetStrict(strict bool) *choice {
 	return choice
 }
 
-func (c choice) Validate(value interface{}) error {
-	return nil
+func (c choice) Validate(values interface{}) error {
+	switch t := values.(type) {
+	case []interface{}:
+		for _, choice := range c.choices {
+			for _, c := range t {
+				if choice == c {
+					return nil
+				}
+			}
+		}
+	default:
+		return errors.New(ErrorNotArrayMessage)
+	}
+	return fmt.Errorf("this value should be %s", c.GetChoices())
 }
 
 /***********/
@@ -630,6 +642,7 @@ const (
 	RangeMinMessage                = "This value should be %s or more"
 	RangeMaxMessage                = "This value should be %s or less"
 	ErrorNotNumberMessage          = "This value should be a valid number"
+	ErrorNotArrayMessage           = "This value should be a valid array or slice"
 	EqualToMessage                 = "This value should be equal to %v"
 	NotEqualToMessage              = "This value should not be equal to %v"
 	LessThanMessage                = "This value should be less than %d"
