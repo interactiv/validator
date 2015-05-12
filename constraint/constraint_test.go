@@ -23,6 +23,13 @@ func TestConstraints(t *testing.T) {
 	}
 }
 
+func TestGroup(t *testing.T) {
+	e := expect.New(t)
+	Constraint := constraint.Count(2, 2).SetGroups([]string{"group1", "group2"})
+	e.Expect(Constraint.Validate([]string{"a", "b"})).ToBeNil()
+	e.Expect(Constraint.Groups()[0]).ToEqual("group1")
+}
+
 type Example struct{}
 
 var fixtures = []list{
@@ -69,5 +76,5 @@ var fixtures = []list{
 	list{constraint.Choice([]interface{}{1, 2}), 3, false},
 	list{constraint.Count(1, 3), []int{1, 2, 3}, true},
 	list{constraint.Count(2, 2), []int{1}, false},
-	list{constraint.Count(3, 4), []int{1, 2}, false},
+	list{constraint.Count(0, 0).SetMin(3).SetMax(5), []int{1, 2}, false},
 }

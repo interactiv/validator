@@ -17,7 +17,7 @@ func New() *Validator {
 	return &Validator{}
 }
 
-func (v *Validator) Validate(loader ValidatorMetadataLoader) (errors []error) {
+func (v *Validator) Validate(loader ValidatorMetadataLoader, groups ...string) (errors []error) {
 	metadata := &Metadata{constraints: []constraint.Constraint{}}
 	loader.LoadValidatorMetadata(metadata)
 	for _, Constraint := range metadata.constraints {
@@ -32,14 +32,14 @@ type Metadata struct {
 	constraints []constraint.Constraint
 }
 
+// AddFieldConstraint adds a  constraint.fieldConstraint to validator.Metadata
 func (m *Metadata) AddFieldConstraint(field string, Constraint constraint.Constraint) *Metadata {
 	m.constraints = append(m.constraints, constraint.NewFieldConstraint(field, Constraint))
 	return m
 }
 
-type ValidationError struct {
-}
-
-func (ve *ValidationError) Error() string {
-	return "error"
+// AddGetterConstraint adds a  constraint.getterConstraint to validator.Metadata
+func (m *Metadata) AddGetterConstraint(getter string, Constraint constraint.Constraint) *Metadata {
+	m.constraints = append(m.constraints, constraint.NewGetterContraint(getter, Constraint))
+	return m
 }

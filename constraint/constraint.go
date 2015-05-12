@@ -16,43 +16,41 @@ import (
 // Constraint represents a constraint that can be validated
 type Constraint interface {
 	Validate(interface{}) error
+	SetGroups(group []string) Constraint
+	Groups() []string
+}
+
+type BaseConstraint struct {
+	groups []string
+}
+
+func (c *BaseConstraint) Groups() []string {
+	if c.groups == nil {
+		c.groups = []string{}
+	}
+	return c.groups
+}
+func (c *BaseConstraint) SetGroups(groups []string) Constraint {
+	c.groups = groups
+	return c
+}
+func (c *BaseConstraint) Validate(value interface{}) error {
+	return nil
 }
 
 // NewFieldConstraint returns a constraint for a field of an struct
 func NewFieldConstraint(fieldName string, constraint Constraint) Constraint {
-	return &FieldConstraint{fieldName: fieldName, constraint: constraint}
+	return &fieldConstraint{fieldName: fieldName, constraint: constraint}
 }
 
-// FieldConstraint Represents a field constraint
-type FieldConstraint struct {
+type fieldConstraint struct {
+	BaseConstraint
 	fieldName  string
 	constraint Constraint
 }
 
-// FieldError is a field error implementing the Error interface
-type FieldError struct {
-	error
-	fieldName  string
-	typeString string
-}
-
-// Error returns an error message
-func (fe FieldError) Error() string {
-	return fe.error.Error()
-}
-
-// FieldName returns the name the field in the struct validated
-func (fe FieldError) FieldName() string {
-	return fe.fieldName
-}
-
-// Type returns the type of the struct
-func (fe FieldError) Type() string {
-	return fe.typeString
-}
-
 // Validate validates a field constraint
-func (fc *FieldConstraint) Validate(value interface{}) error {
+func (fc *fieldConstraint) Validate(value interface{}) error {
 	v := reflect.ValueOf(value)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -61,10 +59,33 @@ func (fc *FieldConstraint) Validate(value interface{}) error {
 		log.Panicf("%v is not a struct", fmt.Sprint(value))
 	}
 	err := fc.constraint.Validate(v.FieldByName(fc.fieldName).Interface())
-	if err != nil {
-		return FieldError{error: err, fieldName: fc.fieldName, typeString: v.Type().String()}
-	}
+
 	return err
+}
+
+func NewGetterContraint(getterName string, constraint Constraint) Constraint {
+	return &getterConstraint{getterName: getterName, constraint: constraint}
+}
+
+type getterConstraint struct {
+	BaseConstraint
+	getterName string
+	constraint Constraint
+}
+
+// Validate returns an error if the constraint is violated
+func (gc getterConstraint) Validate(Struct interface{}) error {
+	value := reflect.ValueOf(Struct)
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+	if value.Kind() != reflect.Struct {
+		return fmt.Errorf("%v is not a struct", Struct)
+	}
+	result := value.MethodByName(gc.getterName).Call([]reflect.Value{})[0].Interface()
+	log.Print(result)
+	return gc.constraint.Validate(result)
+
 }
 
 // NotBlank returns a notBlank constraint
@@ -74,6 +95,7 @@ func NotBlank() Constraint {
 }
 
 type notBlank struct {
+	BaseConstraint
 }
 
 func (nb *notBlank) Validate(value interface{}) error {
@@ -96,6 +118,7 @@ func Blank() Constraint {
 }
 
 type blank struct {
+	BaseConstraint
 }
 
 func (nb *blank) Validate(value interface{}) error {
@@ -118,6 +141,7 @@ func NotNil() Constraint {
 }
 
 type notNil struct {
+	BaseConstraint
 }
 
 func (c *notNil) Validate(value interface{}) error {
@@ -134,6 +158,7 @@ func Nil() Constraint {
 }
 
 type nill struct {
+	BaseConstraint
 }
 
 func (c *nill) Validate(value interface{}) error {
@@ -150,6 +175,7 @@ func True() Constraint {
 }
 
 type isTrue struct {
+	BaseConstraint
 }
 
 func (c *isTrue) Validate(value interface{}) error {
@@ -166,6 +192,7 @@ func False() Constraint {
 }
 
 type isFalse struct {
+	BaseConstraint
 }
 
 func (c *isFalse) Validate(value interface{}) error {
@@ -183,6 +210,7 @@ func Type(theType reflect.Type) Constraint {
 }
 
 type isType struct {
+	BaseConstraint
 	theType reflect.Type
 }
 
@@ -201,6 +229,7 @@ func Email() Constraint {
 }
 
 type email struct {
+	BaseConstraint
 }
 
 // Validate returns an error if the constraint is violated
@@ -218,11 +247,12 @@ func (c email) Validate(value interface{}) error {
 
 // Length returns an length constraint
 func Length(min int, max int) Constraint {
-	c := &length{min, max}
+	c := &length{min: min, max: max}
 	return c
 }
 
 type length struct {
+	BaseConstraint
 	min int
 	max int
 }
@@ -258,6 +288,7 @@ func URL() *URLConstraint {
 
 // URLConstraint represents an url constraint
 type URLConstraint struct {
+	BaseConstraint
 	protocols []string
 }
 
@@ -293,10 +324,12 @@ func (c URLConstraint) Validate(value interface{}) error {
 }
 
 func Regexp(pattern *regexp.Regexp) *RegexpConstraint {
-	return &RegexpConstraint{pattern, true}
+
+	return &RegexpConstraint{pattern: pattern, match: true}
 }
 
 type RegexpConstraint struct {
+	BaseConstraint
 	pattern *regexp.Regexp
 	match   bool
 }
@@ -327,10 +360,11 @@ func (c *RegexpConstraint) Validate(value interface{}) error {
 }
 
 func Range(min, max float64) Constraint {
-	return &rangeConstraint{min, max}
+	return &rangeConstraint{min: min, max: max}
 }
 
 type rangeConstraint struct {
+	BaseConstraint
 	min float64
 	max float64
 }
@@ -353,10 +387,11 @@ func (rc *rangeConstraint) Validate(value interface{}) error {
 }
 
 func EqualTo(val interface{}) Constraint {
-	return &equalTo{val}
+	return &equalTo{value: val}
 }
 
 type equalTo struct {
+	BaseConstraint
 	value interface{}
 }
 
@@ -369,10 +404,11 @@ func (c *equalTo) Validate(value interface{}) error {
 }
 
 func NotEqualTo(val interface{}) Constraint {
-	return &notEqualTo{val}
+	return &notEqualTo{value: val}
 }
 
 type notEqualTo struct {
+	BaseConstraint
 	value interface{}
 }
 
@@ -385,10 +421,11 @@ func (c *notEqualTo) Validate(value interface{}) error {
 }
 
 func LessThan(value float64) Constraint {
-	return &lessThan{value}
+	return &lessThan{value: value}
 }
 
 type lessThan struct {
+	BaseConstraint
 	value float64
 }
 
@@ -403,10 +440,11 @@ func (c lessThan) Validate(value interface{}) error {
 }
 
 func LessThanOrEqual(value float64) Constraint {
-	return &lessThanOrEqual{value}
+	return &lessThanOrEqual{value: value}
 }
 
 type lessThanOrEqual struct {
+	BaseConstraint
 	value float64
 }
 
@@ -421,17 +459,18 @@ func (c *lessThanOrEqual) Validate(value interface{}) error {
 }
 
 func GreaterThan(value float64) Constraint {
-	return &greaterThan{value}
+	return &greaterThan{value: value}
 }
 
 type greaterThan struct {
+	BaseConstraint
 	value float64
 }
 
 // Validate returns an error if the constraint is violated
 func (c *greaterThan) Validate(value interface{}) error {
 	if val, err := ToFloat64(value); err != nil {
-		errors.New(ErrorNotNumberMessage)
+		return errors.New(ErrorNotNumberMessage)
 	} else if val <= c.value {
 		return fmt.Errorf(GreaterThanMessage, fmt.Sprint(c.value))
 	}
@@ -440,10 +479,11 @@ func (c *greaterThan) Validate(value interface{}) error {
 
 // GreaterThanOrEqual returns a great than equal constraint
 func GreaterThanOrEqual(value float64) Constraint {
-	return &greaterThanOrEqual{value, GreaterThanOrEqualMessage}
+	return &greaterThanOrEqual{value: value, message: GreaterThanOrEqualMessage}
 }
 
 type greaterThanOrEqual struct {
+	BaseConstraint
 	value   float64
 	message string
 }
@@ -474,6 +514,7 @@ func Choice(choices []interface{}) *choice {
 }
 
 type choice struct {
+	BaseConstraint
 	choices         []interface{}
 	multiple        bool
 	min             int
@@ -619,6 +660,7 @@ func Count(min int, max int) *count {
 }
 
 type count struct {
+	BaseConstraint
 	min int
 	max int
 }
