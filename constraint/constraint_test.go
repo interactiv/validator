@@ -63,4 +63,11 @@ var fixtures = []list{
 	list{constraint.LessThanOrEqual(10), 10, true},
 	list{constraint.GreaterThan(5), 10, true},
 	list{constraint.GreaterThanOrEqual(5), 5, true},
+	list{constraint.Choice([]interface{}{"a", "b"}), []string{"a"}, true},
+	list{constraint.Choice([]interface{}{"a", "b", "c"}), []interface{}{"a", "d"}, false},
+	list{constraint.Choice([]interface{}{"a", "b"}), "a", true},
+	list{constraint.Choice([]interface{}{1, 2}), 3, false},
+	list{constraint.Count(1, 3), []int{1, 2, 3}, true},
+	list{constraint.Count(2, 2), []int{1}, false},
+	list{constraint.Count(3, 4), []int{1, 2}, false},
 }

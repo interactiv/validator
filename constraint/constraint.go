@@ -58,7 +58,7 @@ func (fc *FieldConstraint) Validate(value interface{}) error {
 		v = v.Elem()
 	}
 	if reflect.Struct != v.Kind() {
-		log.Panicf("v% is not a struct", value)
+		log.Panicf("%v is not a struct", fmt.Sprint(value))
 	}
 	err := fc.constraint.Validate(v.FieldByName(fc.fieldName).Interface())
 	if err != nil {
@@ -397,7 +397,7 @@ func (c lessThan) Validate(value interface{}) error {
 	if val, err := ToFloat64(value); err != nil {
 		errors.New(ErrorNotNumberMessage)
 	} else if val >= c.value {
-		return fmt.Errorf(LessThanMessage, c.value)
+		return fmt.Errorf(LessThanMessage, fmt.Sprint(c.value))
 	}
 	return nil
 }
@@ -415,7 +415,7 @@ func (c *lessThanOrEqual) Validate(value interface{}) error {
 	if val, err := ToFloat64(value); err != nil {
 		errors.New(ErrorNotNumberMessage)
 	} else if val > c.value {
-		return fmt.Errorf(LessThanOrEqualMessage, c.value)
+		return fmt.Errorf(LessThanOrEqualMessage, fmt.Sprint(c.value))
 	}
 	return nil
 }
@@ -433,7 +433,7 @@ func (c *greaterThan) Validate(value interface{}) error {
 	if val, err := ToFloat64(value); err != nil {
 		errors.New(ErrorNotNumberMessage)
 	} else if val <= c.value {
-		return fmt.Errorf(GreaterThanMessage, c.value)
+		return fmt.Errorf(GreaterThanMessage, fmt.Sprint(c.value))
 	}
 	return nil
 }
@@ -470,7 +470,7 @@ func (c greaterThanOrEqual) Validate(value interface{}) error {
 }
 
 func Choice(choices []interface{}) *choice {
-	return &choice{choices: choices}
+	return &choice{choices: choices, multiple: true, max: -1}
 }
 
 type choice struct {
@@ -482,7 +482,6 @@ type choice struct {
 	multipleMessage string
 	minMessage      string
 	maxMessage      string
-	strict          bool
 }
 
 // GetChoices returns a []interface{}
@@ -573,37 +572,128 @@ func (choice *choice) SetMaxMessage(maxMessage string) *choice {
 	return choice
 }
 
-// GetStrict returns a bool
-func (choice choice) GetStrict() bool {
-	return choice.strict
-}
-
-// Setchoice sets *choice.choice and returns *choice
-func (choice *choice) SetStrict(strict bool) *choice {
-	choice.strict = strict
-	return choice
-}
-
+// Validate returns an error if the constraint is violated
 func (c choice) Validate(values interface{}) error {
-	switch t := values.(type) {
-	case []interface{}:
+	switch IsArrayorSlice(values) {
+	case true:
+		if array, err := ToInterfaceArray(values); err != nil {
+			return err
+		} else {
+			return c.validateArray(array)
+		}
+
+	default:
 		for _, choice := range c.choices {
-			for _, c := range t {
-				if choice == c {
-					return nil
-				}
+			if values == choice {
+				return nil
 			}
 		}
-	default:
-		return errors.New(ErrorNotArrayMessage)
 	}
-	return fmt.Errorf("this value should be %s", c.GetChoices())
+	return errors.New(ChoiceMessage)
+}
+
+func (c choice) validateArray(values []interface{}) error {
+	if len(values) < c.min {
+		return errors.New(ChoiceMinMessage)
+	}
+	if c.max > 0 && len(values) > c.max {
+		return errors.New(ChoiceMaxMessage)
+	}
+	for _, value := range values {
+		index := -1
+		for i, choice := range c.choices {
+			if choice == value {
+				index = i
+				break
+			}
+		}
+		if index < 0 {
+			return errors.New(ChoiceMultipleMessage)
+		}
+	}
+	return nil
+}
+
+func Count(min int, max int) *count {
+	return &count{min: min, max: max}
+}
+
+type count struct {
+	min int
+	max int
+}
+
+// GetMin returns a int
+func (count count) GetMin() int {
+	return count.min
+}
+
+// SetMin sets *count.count and returns *count
+func (count *count) SetMin(min int) *count {
+	count.min = min
+	return count
+}
+
+// GetMax returns a float64
+func (count count) GetMax() int {
+	return count.max
+}
+
+// SetMax sets *count.count and returns *count
+func (count *count) SetMax(max int) *count {
+	count.max = max
+	return count
+}
+
+func (count count) Validate(value interface{}) error {
+	if f, err := ToInterfaceArray(value); err != nil {
+		return err
+	} else if count.min == count.max && len(f) != count.min {
+		return fmt.Errorf(CountExactMessage, fmt.Sprint(count.min))
+	} else if len(f) < count.min {
+		return fmt.Errorf(CountMinMessage, fmt.Sprint(count.min))
+	} else if count.max < len(f) {
+		return fmt.Errorf(CountMaxMessage, fmt.Sprint(count.max))
+	}
+	return nil
 }
 
 /***********/
 /* HELPERS */
 /***********/
 
+// ToInterfaceArray takes an array or slice and returns an interface slice or
+// an error if the value isn't an array or a slice
+func ToInterfaceArray(value interface{}) ([]interface{}, error) {
+	if v, ok := value.([]interface{}); ok {
+		return v, nil
+	}
+	if IsArrayorSlice(value) {
+		v := reflect.ValueOf(value)
+		r := make([]interface{}, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			r[i] = v.Index(i).Interface()
+		}
+		return r, nil
+
+	}
+	return nil, fmt.Errorf("%+v is not an array or a slice", value)
+
+}
+
+// IsArrayorSlice returns true if value is
+// an array or a slice
+func IsArrayorSlice(value interface{}) bool {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		return true
+	default:
+		return false
+	}
+}
+
+// ToFloat64 converts a number to a float64 or returns an error
 func ToFloat64(value interface{}) (float64, error) {
 	switch v := value.(type) {
 	case int:
@@ -619,7 +709,7 @@ func ToFloat64(value interface{}) (float64, error) {
 	case float64:
 		return v, nil
 	default:
-		return 0, fmt.Errorf("Cant convert %v to float64")
+		return 0, fmt.Errorf("Cant convert %s to float64", fmt.Sprint(value))
 	}
 }
 
@@ -633,7 +723,7 @@ const (
 	TrueMessage                    = "This value should be true"
 	FalseMessage                   = "This value should be false"
 	TypeMessage                    = "This value should be of type %s"
-	EmailMessage                   = " This value is not a valid email address"
+	EmailMessage                   = "This value is not a valid email address"
 	MinMessage                     = "This value is too short. It should have %d characters or more."
 	MaxMessage                     = "This value is too long. It should have %d characters or less"
 	ExactLengthMessage             = "This value should have exactly %d characters"
@@ -645,10 +735,17 @@ const (
 	ErrorNotArrayMessage           = "This value should be a valid array or slice"
 	EqualToMessage                 = "This value should be equal to %v"
 	NotEqualToMessage              = "This value should not be equal to %v"
-	LessThanMessage                = "This value should be less than %d"
-	LessThanOrEqualMessage         = "This value should be less than or equal to %d"
-	GreaterThanMessage             = "This value should be greater than %d"
-	GreaterThanOrEqualMessage      = "This value should be greater than or equal to %d"
+	LessThanMessage                = "This value should be less than %s"
+	LessThanOrEqualMessage         = "This value should be less than or equal to %s"
+	GreaterThanMessage             = "This value should be greater than %s"
+	GreaterThanOrEqualMessage      = "This value should be greater than or equal to %s"
+	ChoiceMessage                  = "The value you selected is not a valid choice"
+	ChoiceMinMessage               = "You must select at least %s choices"
+	ChoiceMaxMessage               = "You must select at most %s choices"
+	ChoiceMultipleMessage          = "One or more of the given values is invalid"
+	CountMinMessage                = "This collection should contain %s elements or more"
+	CountMaxMessage                = "This collection should contain %s elements or less"
+	CountExactMessage              = "This collection should contain exactly %s elements"
 )
 
 var (
