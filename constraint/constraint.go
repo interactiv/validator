@@ -16,37 +16,30 @@ import (
 // Constraint represents a constraint that can be validated
 type Constraint interface {
 	Validate(interface{}) error
-	SetGroups(group []string) Constraint
 	Groups() []string
 }
 
-type BaseConstraint struct {
-	groups []string
+// NewFieldConstraint returns a constraint for a field of an struct
+func NewFieldConstraint(fieldName string, constraint Constraint) *fieldConstraint {
+	return &fieldConstraint{fieldName: fieldName, constraint: constraint}
 }
 
-func (c *BaseConstraint) Groups() []string {
+type fieldConstraint struct {
+	fieldName  string
+	constraint Constraint
+	groups     []string
+}
+
+func (c fieldConstraint) Groups() []string {
 	if c.groups == nil {
 		c.groups = []string{}
 	}
 	return c.groups
 }
-func (c *BaseConstraint) SetGroups(groups []string) Constraint {
+
+func (c *fieldConstraint) SetGroups(groups ...string) *fieldConstraint {
 	c.groups = groups
 	return c
-}
-func (c *BaseConstraint) Validate(value interface{}) error {
-	return nil
-}
-
-// NewFieldConstraint returns a constraint for a field of an struct
-func NewFieldConstraint(fieldName string, constraint Constraint) Constraint {
-	return &fieldConstraint{fieldName: fieldName, constraint: constraint}
-}
-
-type fieldConstraint struct {
-	BaseConstraint
-	fieldName  string
-	constraint Constraint
 }
 
 // Validate validates a field constraint
@@ -68,7 +61,6 @@ func NewGetterContraint(getterName string, constraint Constraint) Constraint {
 }
 
 type getterConstraint struct {
-	BaseConstraint
 	getterName string
 	constraint Constraint
 }
@@ -95,7 +87,6 @@ func NotBlank() Constraint {
 }
 
 type notBlank struct {
-	BaseConstraint
 }
 
 func (nb *notBlank) Validate(value interface{}) error {
@@ -118,7 +109,7 @@ func Blank() Constraint {
 }
 
 type blank struct {
-	BaseConstraint
+	groups []string
 }
 
 func (nb *blank) Validate(value interface{}) error {
@@ -141,7 +132,7 @@ func NotNil() Constraint {
 }
 
 type notNil struct {
-	BaseConstraint
+	groups []string
 }
 
 func (c *notNil) Validate(value interface{}) error {
@@ -158,7 +149,7 @@ func Nil() Constraint {
 }
 
 type nill struct {
-	BaseConstraint
+	groups []string
 }
 
 func (c *nill) Validate(value interface{}) error {
@@ -175,7 +166,7 @@ func True() Constraint {
 }
 
 type isTrue struct {
-	BaseConstraint
+	groups []string
 }
 
 func (c *isTrue) Validate(value interface{}) error {
@@ -192,7 +183,7 @@ func False() Constraint {
 }
 
 type isFalse struct {
-	BaseConstraint
+	groups []string
 }
 
 func (c *isFalse) Validate(value interface{}) error {
@@ -210,7 +201,7 @@ func Type(theType reflect.Type) Constraint {
 }
 
 type isType struct {
-	BaseConstraint
+	groups  []string
 	theType reflect.Type
 }
 
@@ -229,7 +220,7 @@ func Email() Constraint {
 }
 
 type email struct {
-	BaseConstraint
+	groups []string
 }
 
 // Validate returns an error if the constraint is violated
@@ -252,9 +243,9 @@ func Length(min int, max int) Constraint {
 }
 
 type length struct {
-	BaseConstraint
-	min int
-	max int
+	groups []string
+	min    int
+	max    int
 }
 
 // Validate returns an error if the constraint is violated
@@ -288,7 +279,7 @@ func URL() *URLConstraint {
 
 // URLConstraint represents an url constraint
 type URLConstraint struct {
-	BaseConstraint
+	groups    []string
 	protocols []string
 }
 
@@ -329,7 +320,7 @@ func Regexp(pattern *regexp.Regexp) *RegexpConstraint {
 }
 
 type RegexpConstraint struct {
-	BaseConstraint
+	groups  []string
 	pattern *regexp.Regexp
 	match   bool
 }
@@ -364,9 +355,9 @@ func Range(min, max float64) Constraint {
 }
 
 type rangeConstraint struct {
-	BaseConstraint
-	min float64
-	max float64
+	groups []string
+	min    float64
+	max    float64
 }
 
 // Validate returns an error if the constraint is violated
@@ -391,8 +382,8 @@ func EqualTo(val interface{}) Constraint {
 }
 
 type equalTo struct {
-	BaseConstraint
-	value interface{}
+	groups []string
+	value  interface{}
 }
 
 // Validate returns an error if the constraint is violated
@@ -408,8 +399,8 @@ func NotEqualTo(val interface{}) Constraint {
 }
 
 type notEqualTo struct {
-	BaseConstraint
-	value interface{}
+	groups []string
+	value  interface{}
 }
 
 // Validate returns an error if the constraint is violated
@@ -425,8 +416,8 @@ func LessThan(value float64) Constraint {
 }
 
 type lessThan struct {
-	BaseConstraint
-	value float64
+	groups []string
+	value  float64
 }
 
 // Validate returns an error if the constraint is violated
@@ -444,8 +435,8 @@ func LessThanOrEqual(value float64) Constraint {
 }
 
 type lessThanOrEqual struct {
-	BaseConstraint
-	value float64
+	groups []string
+	value  float64
 }
 
 // Validate returns an error if the constraint is violated
@@ -463,8 +454,8 @@ func GreaterThan(value float64) Constraint {
 }
 
 type greaterThan struct {
-	BaseConstraint
-	value float64
+	groups []string
+	value  float64
 }
 
 // Validate returns an error if the constraint is violated
@@ -483,7 +474,7 @@ func GreaterThanOrEqual(value float64) Constraint {
 }
 
 type greaterThanOrEqual struct {
-	BaseConstraint
+	groups  []string
 	value   float64
 	message string
 }
@@ -514,7 +505,7 @@ func Choice(choices []interface{}) *choice {
 }
 
 type choice struct {
-	BaseConstraint
+	groups          []string
 	choices         []interface{}
 	multiple        bool
 	min             int
@@ -660,9 +651,9 @@ func Count(min int, max int) *count {
 }
 
 type count struct {
-	BaseConstraint
-	min int
-	max int
+	groups []string
+	min    int
+	max    int
 }
 
 // GetMin returns a int
